@@ -45,7 +45,7 @@ class ComponentExpression extends Expression {
       var r = proxy.componentOf(obj);
       if (r is Map) {
         assert(!(r[prop] is Function),
-            'should be an instance of widget or const value');
+        'should be an instance of widget or const value');
         return R(r[prop], exp: processed);
       }
     }
@@ -63,15 +63,21 @@ class InlineExpression extends Expression {
   R onEvaluate(ProxyMirror proxy, BindingData binding, String exp, String pre) {
     var regexp = RegExp(r'\$\w+');
     var matches = regexp.allMatches(pre);
+    var regexpWithBracket = RegExp(r'\$\{.+\}');
+    var matchesWithBracket = regexpWithBracket.allMatches(pre);
     var builder = _InlineVariableBuilder(
-        matches: matches, data: pre, proxyMirror: proxy, binding: binding);
+        matches: []..addAll(matches)..addAll(matchesWithBracket),
+        data: pre,
+        proxyMirror: proxy,
+        binding: binding);
     binding.addBindValue(builder);
     return R(builder, exp: exp, needBinding: true);
   }
 
   @override
   bool hitTest(String exp, String pre) {
-    return RegExp(r'\$\w+', multiLine: true).hasMatch(pre);
+    return RegExp(r'\$\w+', multiLine: true).hasMatch(pre) ||
+        RegExp(r'\$\{.+\}', multiLine: true).hasMatch(pre);
   }
 }
 
@@ -147,7 +153,8 @@ class _InlineVariableBuilder extends _BindValueBuilder<String> {
       {this.matches, String data, ProxyMirror proxyMirror, BindingData binding})
       : super(data, proxyMirror, binding) {
     matches.forEach((e) {
-      final bindProp = binding?.bindDataOf(e.group(0).substring(1));
+      var value = _extractValue(e);
+      final bindProp = binding?.bindDataOf(value);
       if (bindProp is ValueNotifier) {
         _watchedProps.add(bindProp);
       }
@@ -159,10 +166,11 @@ class _InlineVariableBuilder extends _BindValueBuilder<String> {
   String get value {
     var extract = data;
     matches
-        .map((e) => {
-              '0': binding?.bindDataOf(e.group(0).substring(1)),
-              '1': e.group(0)
-            })
+        .map((e) =>
+    {
+      '0': binding?.bindDataOf(_extractValue(e)),
+      '1': e.group(0)
+    })
         .forEach((e) {
       var first = e['0'] is ValueNotifier ? e['0'].value : e['0'];
       if (first != null) {
@@ -171,6 +179,18 @@ class _InlineVariableBuilder extends _BindValueBuilder<String> {
     });
     return extract;
   }
+
+  String _extractValue(e) {
+    String retValue;
+    String matchStr = e.group(0);
+    if (matchStr.startsWith('\${')) {
+      retValue = matchStr.substring(2, matchStr.length - 1);
+    } else {
+      retValue = matchStr.substring(1);
+    }
+    return retValue;
+  }
+
 }
 
 class _PropBuilder extends _BindValueBuilder {

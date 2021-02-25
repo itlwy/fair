@@ -20,10 +20,14 @@ class Domain<E> {
             exp == 'index');
   }
 
-  String bindValue(String exp) {
+  dynamic bindValue(String exp) {
     // TODO mapEach
     if (exp == 'item') {
-      return exp.replaceAll('item', '${source[index]}');
+      if (source[index] is String) {
+        return exp.replaceAll('item', '${source[index]}');
+      } else {
+        return source[index];
+      }
     }
     if (exp == 'index') {
       return exp.replaceAll('item', '$index');

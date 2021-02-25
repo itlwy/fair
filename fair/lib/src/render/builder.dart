@@ -64,6 +64,9 @@ class DynamicWidgetBuilder extends DynamicBuilder {
         isWidget = internal ? widgetNames[name] : true;
       }
       assert(mapper != null, '$name is not registered!');
+      if (name == 'Sugar.map') {
+        return _buildSugarMap(mapper, map, context);
+      }
       if (name == 'Sugar.mapEach') {
         return _buildSugarMapEach(mapper, map, context);
       }
@@ -175,6 +178,28 @@ class DynamicWidgetBuilder extends DynamicBuilder {
     }
     na['\$'] = context;
     return W<Map<String, dynamic>>(na, needBinding);
+  }
+
+  List<Widget> _buildSugarMap(Function mapEach, Map map, BuildContext context) {
+    var source = map['pa'];
+    var children = [];
+    if (source is String) {
+      var r = proxyMirror.evaluate(context, bound, source);
+      if (r.data != null) {
+        source = r.data;
+      }
+    }
+    assert(source is List, 'Sugar.map arguments should be List！');
+    if (source != null && source is List) {
+      var builderMap = map['na']['builder'];
+      children = Domain(source).forEach(($, _) {
+        return convert(context, builderMap, domain: $);
+      });
+    }
+    var params = {
+      'pa': [source, children]
+    };
+    return mapEach.call(params);
   }
 
   List<Widget> _buildSugarMapEach(

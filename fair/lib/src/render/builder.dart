@@ -183,6 +183,11 @@ class DynamicWidgetBuilder extends DynamicBuilder {
   List<Widget> _buildSugarMap(Function mapEach, Map map, BuildContext context) {
     var source = map['pa'];
     var children = [];
+
+    /// TODO: 解析生成的dsl 会包裹2层[] ，现在这里处理，之后改造生成器
+    if (source != null && source.length == 1) {
+      source = source[0];
+    }
     if (source is String) {
       var r = proxyMirror.evaluate(context, bound, source);
       if (r.data != null) {
@@ -191,6 +196,16 @@ class DynamicWidgetBuilder extends DynamicBuilder {
     }
     assert(source is List, 'Sugar.map arguments should be List！');
     if (source != null && source is List) {
+//      source = source.map((e) {
+//        if (e is String) {
+//          var r = proxyMirror.evaluate(context, bound, e);
+//          if (r.data != null) {
+//            return r.data;
+//          }
+//          return e;
+//        }
+//      })
+//          .toList();
       var builderMap = map['na']['builder'];
       children = Domain(source).forEach(($, _) {
         return convert(context, builderMap, domain: $);
